@@ -1,4 +1,4 @@
-## Google Cloud Load Balancer logs in Elasticsearch
+## Polkadot Eco logs in Elasticsearch
 
 [![Build Status](https://jenkins.bindiego.com/buildStatus/icon?job=raycom-gclb-log)](https://jenkins.bindiego.com/job/raycom-gclb-log/)
 
