@@ -40,6 +40,8 @@ So this script will
 - Setup a Stackdriver sink (Pubsub) for HTTP load balancers
 - Grant permissions to the Service Account that been used by the sink, who will publish logs to Pubsub topic
 
+Alternatively, you could do all the above in GCP console if you are familiar with the [WebUI](https://console.cloud.google.com/).
+
 2. Sethup Elasticsearch & Kibana
 
 Same as GCP, there is a script can get the job done. Simply run `cd scripts/elastic && ./init.sh; cd -` then you done. Also, make sure you have updated the parameters on the top of the `init.sh` script according to your Elasticsearch setup.
