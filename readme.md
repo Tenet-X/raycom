@@ -13,7 +13,7 @@ beam代码理论上可以驱动spark，flink等等流式框架，详情参考[�
 Stackdriver logging -> Pubsub -> Dataflow -> Elasticsearch
 
 #### Current pipeline DAG
-![](https://raw.githubusercontent.com/cloudymoma/raycom/gcp-lb-log/miscs/pipeline_dag.png)
+![](https://raw.githubusercontent.com/Tenet-X/raycom/polkadot/miscs/pipeline_dag.png)
 
 #### Quick start 快速开始
 
