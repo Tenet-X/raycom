@@ -6,12 +6,12 @@
                     "rollover": {
                         "max_size": "20GB",
                         "max_docs": 20000000,
-                        "max_age": "7d"
+                        "max_age": "30d"
                     }
                 }
             },
             "delete": {
-                "min_age": "30d",
+                "min_age": "3650d",
                 "actions": {
                     "delete": {}
                 }
