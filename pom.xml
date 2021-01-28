@@ -21,7 +21,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>bindiego</groupId>
-  <artifactId>gcp-gclb-logging</artifactId>
+  <artifactId>polkadot-data</artifactId>
   <version>1.0.0</version>
 
   <packaging>jar</packaging>
@@ -31,7 +31,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <beam.version>2.25.0</beam.version>
+    <beam.version>2.27.0</beam.version>
 
     <commons.io.ver>2.8.0</commons.io.ver>
     <bigquery.version>v2-rev20191211-1.30.9</bigquery.version>

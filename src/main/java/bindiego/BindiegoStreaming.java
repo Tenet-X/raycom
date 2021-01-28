@@ -136,6 +136,7 @@ public class BindiegoStreaming {
                 jsonRoot.put("@timestamp", jsonRoot.get("timestamp").asText());
                 jsonRoot.remove("timestamp");
 
+                /*
                 // Extract host & protocol from URL
                 URL url = new URL(jsonRoot.get("httpRequest").get("requestUrl").asText());
                 ((ObjectNode) jsonRoot.get("httpRequest")).put("requestDomain", url.getHost());
@@ -205,6 +206,7 @@ public class BindiegoStreaming {
                     ((ObjectNode) jsonRoot.get("jsonPayload"))
                         .put("cacheIdCityCode", cachedIdCityCode);
                 }
+                */
 
                 r.get(STR_OUT).output(mapper.writeValueAsString(json));
 
@@ -234,7 +236,7 @@ public class BindiegoStreaming {
             PubsubIO.readMessages()
                 .fromSubscription(options.getSubscription()));
 
-        PCollectionTuple processedData = messages.apply("GCLB logs ETL",
+        PCollectionTuple processedData = messages.apply("Polkadot Data ETL",
             ParDo.of(new ExtractPayload())
                 .withOutputTags(STR_OUT, TupleTagList.of(STR_FAILURE_OUT)));
 
