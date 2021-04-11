@@ -50,6 +50,8 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.Partition;
+import org.apache.beam.sdk.transforms.Partition.PartitionFn;
 import org.apache.beam.sdk.transforms.DoFn.MultiOutputReceiver;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.transforms.SimpleFunction;
@@ -72,6 +74,7 @@ import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
 import org.apache.beam.sdk.values.PCollectionView;
@@ -102,6 +105,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class BindiegoStreaming {
     /* extract the csv payload from message */
@@ -123,7 +127,7 @@ public class BindiegoStreaming {
             // TODO: data validation here to prevent later various outputs inconsistency
             try {
                 PubsubMessage psmsg = ctx.element();
-                // GLB json data
+                // polkdadot node logs data
                 payload = new String(psmsg.getPayload(), StandardCharsets.UTF_8);
 
                 logger.debug("Extracted raw message: " + payload);
@@ -226,17 +230,153 @@ public class BindiegoStreaming {
         private ObjectMapper mapper;
     }
 
+    public static class ExtractDataPayload extends DoFn<PubsubMessage, String> {
+
+        public ExtractDataPayload() {}
+
+        @Setup 
+        public void setup() {
+            mapper = new ObjectMapper();
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext ctx, OutputReceiver<String> r) 
+                throws IllegalArgumentException {
+
+            String payload = null;
+
+            try {
+                PubsubMessage psmsg = ctx.element();
+                // Polkadot RPC extracted json data
+                payload = new String(psmsg.getPayload(), StandardCharsets.UTF_8);
+
+                logger.debug("Extracted raw message: " + payload);
+
+                JsonNode json = mapper.readTree(payload);
+                ObjectNode jsonRoot = (ObjectNode) json;
+
+                // Optional: add timestamp in Elasticsearch's native tongue
+                jsonRoot.put("@timestamp", jsonRoot.get("blocktime").asLong());
+                // jsonRoot.remove("blocktime");
+
+                r.output(mapper.writeValueAsString(json));
+            } catch (Exception ex) {
+                if (null == payload)
+                    payload = "Failed to extract pubsub payload";
+
+                logger.error("Failed extract pubsub message", ex);
+            }
+        }
+
+        private ObjectMapper mapper;
+    }
+
     static void run(BindiegoStreamingOptions options) throws Exception {
         // FileSystems.setDefaultPipelineOptions(options);
 
         Pipeline p = Pipeline.create(options);
 
-        /* Raw data processing */
-        PCollection<PubsubMessage> messages = p.apply("Read Pubsub Events", 
+        /* Polkadot data */
+        PCollection<PubsubMessage> polkadataMsg = p.apply("Read Pubsub - Polkadot data", 
+            PubsubIO.readMessages()
+                .fromSubscription(options.getPolkadatasub()));
+
+        // json data as string
+        PCollection<String> polkadata = polkadataMsg.apply("Get json data",
+            ParDo.of(new ExtractDataPayload()));
+
+        // identify json, e.g. block or transaction
+        PCollectionList<String> allJson = polkadata.apply(
+            Partition.of(JsonData.values().length, new PartitionFn<String>() {
+                public int partitionFor(String data, int numPartitions) {
+                    try {
+                        ObjectMapper mapper = new ObjectMapper();
+                        JsonNode json = mapper.readTree(data);
+                        ObjectNode jsonRoot = (ObjectNode) json;
+                    
+                        if (null != json.get("transactionCount")) {
+                            return JsonData.TX.ordinal();
+                        } else {
+                            return JsonData.BLK.ordinal();
+                        }
+                    } catch (JsonProcessingException ex) {
+                        return JsonData.ERR.ordinal();
+                    }
+                }}));
+        // block data
+        PCollection<String> blkJson = allJson.get(JsonData.BLK.ordinal());
+        blkJson.apply(options.getWindowSize() + " window for block data",
+            Window.<String>into(FixedWindows.of(DurationUtils.parseDuration(options.getWindowSize())))
+                .triggering(
+                    AfterWatermark.pastEndOfWindow()
+                        .withEarlyFirings(
+                            AfterProcessingTime
+                                .pastFirstElementInPane() 
+                                .plusDelayOf(DurationUtils.parseDuration(options.getEarlyFiringPeriod())))
+                        .withLateFirings(
+                            AfterPane.elementCountAtLeast(
+                                options.getLateFiringCount().intValue()))
+                )
+                .discardingFiredPanes() // e.g. .accumulatingFiredPanes() etc.
+                .withAllowedLateness(DurationUtils.parseDuration(options.getAllowedLateness()),
+                    ClosingBehavior.FIRE_IF_NON_EMPTY))
+            .apply("Append block data to Elasticsearch",
+                ElasticsearchIO.append()
+                    .withMaxBatchSize(options.getEsMaxBatchSize())
+                    .withMaxBatchSizeBytes(options.getEsMaxBatchBytes())
+                    .withConnectionConf(
+                        ElasticsearchIO.ConnectionConf.create(
+                            options.getEsHost(),
+                            options.getBlkIdx())
+                                .withUsername(options.getEsUser())
+                                .withPassword(options.getEsPass())
+                                .withNumThread(options.getEsNumThread()))
+                                //.withTrustSelfSignedCerts(true)) // false by default
+                    .withRetryConf(
+                        ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
+
+        // transaction data
+        PCollection<String> txJson = allJson.get(JsonData.TX.ordinal());
+        txJson.apply(options.getWindowSize() + " window for transaction data",
+            Window.<String>into(FixedWindows.of(DurationUtils.parseDuration(options.getWindowSize())))
+                .triggering(
+                    AfterWatermark.pastEndOfWindow()
+                        .withEarlyFirings(
+                            AfterProcessingTime
+                                .pastFirstElementInPane() 
+                                .plusDelayOf(DurationUtils.parseDuration(options.getEarlyFiringPeriod())))
+                        .withLateFirings(
+                            AfterPane.elementCountAtLeast(
+                                options.getLateFiringCount().intValue()))
+                )
+                .discardingFiredPanes() // e.g. .accumulatingFiredPanes() etc.
+                .withAllowedLateness(DurationUtils.parseDuration(options.getAllowedLateness()),
+                    ClosingBehavior.FIRE_IF_NON_EMPTY))
+            .apply("Append transaction data to Elasticsearch",
+                ElasticsearchIO.append()
+                    .withMaxBatchSize(options.getEsMaxBatchSize())
+                    .withMaxBatchSizeBytes(options.getEsMaxBatchBytes())
+                    .withConnectionConf(
+                        ElasticsearchIO.ConnectionConf.create(
+                            options.getEsHost(),
+                            options.getTxIdx())
+                                .withUsername(options.getEsUser())
+                                .withPassword(options.getEsPass())
+                                .withNumThread(options.getEsNumThread()))
+                                //.withTrustSelfSignedCerts(true)) // false by default
+                    .withRetryConf(
+                        ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
+
+        // TODO: error data
+        PCollection<String> errJson = allJson.get(JsonData.ERR.ordinal());
+        /* Polkadot data */
+
+        /* Polkadot logs */
+        PCollection<PubsubMessage> messages = p.apply("Read Pubsub - Polkadot logs", 
             PubsubIO.readMessages()
                 .fromSubscription(options.getSubscription()));
 
-        PCollectionTuple processedData = messages.apply("Polkadot Data ETL",
+        PCollectionTuple processedData = messages.apply("Polkadot logs ETL",
             ParDo.of(new ExtractPayload())
                 .withOutputTags(STR_OUT, TupleTagList.of(STR_FAILURE_OUT)));
 
@@ -276,6 +416,8 @@ public class BindiegoStreaming {
                                 //.withTrustSelfSignedCerts(true)) // false by default
                     .withRetryConf(
                         ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
+        /* Polkadot logs */
+
         /* END - Elasticsearch */
 
 /*
@@ -343,4 +485,10 @@ public class BindiegoStreaming {
     /* tag for failure output from the UDF */
     private static final TupleTag<String> STR_FAILURE_OUT = 
         new TupleTag<String>() {};
+
+    enum JsonData {
+        BLK, // Block json data
+        TX, // Transaction json data
+        ERR // Failed elements
+    }
 }
