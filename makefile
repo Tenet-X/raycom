@@ -12,6 +12,8 @@ esindex := polkadot-ingest
 esBatchSize := 2000
 esBatchBytes := 10485760
 esNumThread := 2
+blkIdx := polkadata-blk-ingest
+txIdx := polkadata-tx-ingest
 
 dfup:
 	@mvn -Pdataflow-runner compile exec:java \
@@ -31,6 +33,7 @@ dfup:
         --runner=DataflowRunner \
         --topic=projects/$(project)/topics/polkadot-eco-logs \
         --subscription=projects/$(project)/subscriptions/polkadot-eco-logs4k8es \
+        --polkadatasub=projects/$(project)/subscriptions/ok-polkadot-sub \
         --numShards=1 \
         --windowSize=6s \
         --allowedLateness=8s \
@@ -46,6 +49,8 @@ dfup:
         --esMaxBatchSize=$(esBatchSize) \
         --esMaxBatchBytes=$(esBatchBytes) \
         --esNumThread=$(esNumThread) \
+        --blkIdx=$(blkIdx) \
+        --txIdx=$(txIdx) \
         --defaultWorkerLogLevel=INFO \
         --jobName=$(job) \
         --update \

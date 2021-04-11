@@ -1,0 +1,88 @@
+{
+    "index_patterns": [
+        "polkadata-tx*"
+    ],
+    "order": 999,
+    "settings": {
+      "number_of_shards": 4,
+      "number_of_replicas": 1,
+      "index.lifecycle.name": "polkadot-policy",
+      "index.lifecycle.rollover_alias": "polkadata-tx-ingest",
+      "codec": "best_compression"
+    },
+    "mappings" : {
+      "dynamic": true,
+      "properties" : {
+        "blockHash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "blockHeight" : {
+          "type" : "long"
+        },
+        "blocktime" : {
+          "type" : "date",
+          "format" : "epoch_second"
+        },
+        "@timestamp": {
+          "type" : "date",
+          "format": "epoch_second"
+        },
+        "eventCount" : {
+          "type" : "long"
+        },
+        "fee" : {
+          "type" : "double"
+        },
+        "hash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "hour" : {
+          "type" : "long"
+        },
+        "index" : {
+          "type" : "long"
+        },
+        "method" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "pallet" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "params" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "signed" : {
+          "type" : "boolean"
+        },
+        "success" : {
+          "type" : "boolean"
+        },
+        "tip" : {
+          "type" : "double"
+        },
+        "totalIndex" : {
+          "type" : "long"
+        }
+      }
+    }
+}

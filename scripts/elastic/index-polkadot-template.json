@@ -6,6 +6,8 @@
   "settings": {
     "number_of_shards": 4,
     "number_of_replicas": 1,
+    "index.lifecycle.name": "polkadot-policy",
+    "index.lifecycle.rollover_alias": "polkadot-ingest",
     "codec": "best_compression"
   },
   "mappings": {

@@ -1,0 +1,67 @@
+{
+    "index_patterns": [
+        "polkadata-blk*"
+    ],
+    "order": 999,
+    "settings": {
+      "number_of_shards": 4,
+      "number_of_replicas": 1,
+      "index.lifecycle.name": "polkadot-policy",
+      "index.lifecycle.rollover_alias": "polkadata-blk-ingest",
+      "codec": "best_compression"
+    },
+    "mappings" : {
+      "dynamic": true,
+      "properties" : {
+        "blocktime" : {
+          "type" : "date",
+          "format": "epoch_second"
+        },
+        "@timestamp": {
+          "type" : "date",
+          "format": "epoch_second"
+        },
+        "fee" : {
+          "type" : "double"
+        },
+        "finalized" : {
+          "type" : "boolean"
+        },
+        "hash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "height" : {
+          "type" : "long"
+        },
+        "logCount" : {
+          "type" : "long"
+        },
+        "previousBlockHash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "runtimeVersion" : {
+          "type" : "long"
+        },
+        "stateRoot" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "totalTxIndex" : {
+          "type" : "long"
+        },
+        "transactionCount" : {
+          "type" : "long"
+        },
+        "transactionsRoot" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "validator" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        }
+      }
+    }
+}

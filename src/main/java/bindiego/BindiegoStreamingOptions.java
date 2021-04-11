@@ -127,4 +127,19 @@ public interface BindiegoStreamingOptions
     @Default.Integer(1)
     Integer getEsNumThread();
     void setEsNumThread(Integer value);
+
+    @Description("Polkadot data (from agent RPC query) subcription of pubsub")
+    @Required
+    ValueProvider<String> getPolkadatasub();
+    void setPolkadatasub(ValueProvider<String> value);
+
+    @Description("Elasticsearch index used for blocks data")
+    @Required
+    String getBlkIdx();
+    void setBlkIdx(String value);
+
+    @Description("Elasticsearch index used for transactions data")
+    @Required
+    String getTxIdx();
+    void setTxIdx(String value);
 }
