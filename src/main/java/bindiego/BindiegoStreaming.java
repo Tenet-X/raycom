@@ -286,7 +286,7 @@ public class BindiegoStreaming {
             ParDo.of(new ExtractDataPayload()));
 
         // identify json, e.g. block or transaction
-        PCollectionList<String> allJson = polkadata.apply(
+        PCollectionList<String> allJson = polkadata.apply("Identify Json types", 
             Partition.of(JsonData.values().length, new PartitionFn<String>() {
                 public int partitionFor(String data, int numPartitions) {
                     try {

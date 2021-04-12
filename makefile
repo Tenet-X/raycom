@@ -75,6 +75,7 @@ df:
         --runner=DataflowRunner \
         --topic=projects/$(project)/topics/polkadot-eco-logs \
         --subscription=projects/$(project)/subscriptions/polkadot-eco-logs4k8es \
+        --polkadatasub=projects/$(project)/subscriptions/ok-polkadot-sub \
         --numShards=1 \
         --windowSize=6s \
         --allowedLateness=8s \
@@ -90,6 +91,8 @@ df:
         --esMaxBatchSize=$(esBatchSize) \
         --esMaxBatchBytes=$(esBatchBytes) \
         --esNumThread=$(esNumThread) \
+        --blkIdx=$(blkIdx) \
+        --txIdx=$(txIdx) \
         --defaultWorkerLogLevel=INFO \
         --jobName=$(job) \
         --region=$(region) \
