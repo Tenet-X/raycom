@@ -1,0 +1,77 @@
+{ "BigQuery Schema": [
+  {
+    "mode": "NULLABLE",
+    "name": "blocktime",
+    "type": "TIMESTAMP"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "blockHash",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "blockHeight",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "eventCount",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "fee",
+    "type": "FLOAT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "hash",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "hour",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "index",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "method",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "pallet",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "params",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "signed",
+    "type": "BOOL"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "success",
+    "type": "BOOL"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "tip",
+    "type": "FLOAT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "totalIndex",
+    "type": "INT64"
+  }
+]}

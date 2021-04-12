@@ -1,0 +1,67 @@
+{ "BigQuery Schema": [
+  {
+    "mode": "NULLABLE",
+    "name": "blocktime",
+    "type": "TIMESTAMP"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "hash",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "fee",
+    "type": "FLOAT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "finalized",
+    "type": "BOOL"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "height",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "logCount",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "previousBlockHash",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "runtimeVersion",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "stateRoot",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "totalTxIndex",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "transactionCount",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "transactionsRoot",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "validator",
+    "type": "STRING"
+  }
+]}
