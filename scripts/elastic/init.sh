@@ -5,8 +5,7 @@ pwd=`pwd`
 es_client=https://k8es.client.bindiego.com
 kbn_host=https://k8na.bindiego.com
 es_user=elastic
-# es_pass=changeme
-es_pass=fVN342iv6lWtgGw5g171x54g
+es_pass=changeme
 
 # Create an ES pipeline for GCLB logs
 __create_index_pipeline() {
