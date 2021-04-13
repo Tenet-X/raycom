@@ -105,6 +105,10 @@ df: bqschema
         --esNumThread=$(esNumThread) \
         --blkIdx=$(blkIdx) \
         --txIdx=$(txIdx) \
+        --bqBlk=$(bqblk) \
+        --bqTx=$(bqtx) \
+        --bqBlkTbl=$(bqblktbl) \
+        --bqTxTbl=$(bqtxtbl) \
         --defaultWorkerLogLevel=INFO \
         --jobName=$(job) \
         --region=$(region) \
