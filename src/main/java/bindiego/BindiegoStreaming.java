@@ -10,10 +10,19 @@ import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 import java.sql.*;
 import java.net.URL;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 // Import SLF4J packages.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.api.services.bigquery.model.TableFieldSchema;
+import com.google.api.services.bigquery.model.TableSchema;
+import com.google.api.services.bigquery.model.TableReference;
+import com.google.api.services.bigquery.model.TableRow;
+import com.google.api.services.bigquery.model.Clustering;
+import com.google.api.services.bigquery.model.TimePartitioning;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
@@ -22,6 +31,7 @@ import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.InsertRetryPolicy;
+import org.apache.beam.sdk.io.gcp.bigquery.TableRowJsonCoder;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.io.FileBasedSink;
@@ -335,6 +345,75 @@ public class BindiegoStreaming {
                     .withRetryConf(
                         ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
 
+        blkJson.apply("Prepare Block BQ TableRow",
+            ParDo.of(
+                new DoFn<String, TableRow>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext ctx) {
+                        String jsonBlk = ctx.element();
+                        
+                        try {
+                            ctx.output(
+                                TableRowJsonCoder.of().decode(
+                                    new ByteArrayInputStream(jsonBlk.getBytes())
+                                )
+                            );
+                        } catch (java.io.IOException ex) {
+                            logger.error("Failed creating BQ Block TableRow", ex);
+                        }
+                    } // End processElement
+                } // End DoFn
+            ) // End ParDo
+        ).apply("Insert BigQuery - Block",
+            BigQueryIO.writeTableRows()
+                .withSchema(
+                    NestedValueProvider.of(
+                        options.getBqBlk(),
+                        new SerializableFunction<String, TableSchema>() {
+                            @Override
+                            public TableSchema apply(String jsonPath) {
+                                TableSchema tableSchema = new TableSchema();
+                                List<TableFieldSchema> fields = new ArrayList<>();
+                                SchemaParser schemaParser = new SchemaParser();
+                                JSONObject jsonSchema;
+
+                                try {
+                                    jsonSchema = schemaParser.parseSchema(jsonPath);
+
+                                    JSONArray bqSchemaJsonArray =
+                                        jsonSchema.getJSONArray(BIGQUERY_SCHEMA);
+
+                                    for (int i = 0; i < bqSchemaJsonArray.length(); i++) {
+                                        JSONObject inputField = bqSchemaJsonArray.getJSONObject(i);
+                                        TableFieldSchema field =
+                                            new TableFieldSchema()
+                                                .setName(inputField.getString(NAME))
+                                                .setType(inputField.getString(TYPE));
+                                        if (inputField.has(MODE)) {
+                                            field.setMode(inputField.getString(MODE));
+                                        }
+
+                                        fields.add(field);
+                                    }
+                                    tableSchema.setFields(fields);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                                return tableSchema;
+                            }
+                        }))
+                    .withTimePartitioning(
+                        new TimePartitioning().setField("blocktime")
+                            .setType("DAY")
+                            .setExpirationMs(null)
+                    )
+                    .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+                    .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+                    .to(options.getBqBlkTbl())
+                    .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
+                    .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
+                    .withCustomGcsTempLocation(options.getGcsTempLocation()));
+
         // transaction data
         PCollection<String> txJson = allJson.get(JsonData.TX.ordinal());
         txJson.apply(options.getWindowSize() + " window for transaction data",
@@ -366,6 +445,75 @@ public class BindiegoStreaming {
                                 //.withTrustSelfSignedCerts(true)) // false by default
                     .withRetryConf(
                         ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
+
+            txJson.apply("Prepare Transaction BQ TableRow",
+                ParDo.of(
+                    new DoFn<String, TableRow>() {
+                        @ProcessElement
+                        public void processElement(ProcessContext ctx) {
+                            String jsonTx = ctx.element();
+    
+                            try {
+                                ctx.output(
+                                    TableRowJsonCoder.of().decode(
+                                        new ByteArrayInputStream(jsonTx.getBytes())
+                                    )
+                                );
+                            } catch (java.io.IOException ex) {
+                                logger.error("Failed creating BQ Transaction TableRow", ex);
+                            }
+                        } // End processElement
+                    } // End DoFn
+                ) // End ParDo
+            ).apply("Insert BigQuery - Transaction",
+                BigQueryIO.writeTableRows()
+                    .withSchema(
+                        NestedValueProvider.of(
+                            options.getBqTx(),
+                            new SerializableFunction<String, TableSchema>() {
+                                @Override
+                                public TableSchema apply(String jsonPath) {
+                                    TableSchema tableSchema = new TableSchema();
+                                    List<TableFieldSchema> fields = new ArrayList<>();
+                                    SchemaParser schemaParser = new SchemaParser();
+                                    JSONObject jsonSchema;
+    
+                                    try {
+                                        jsonSchema = schemaParser.parseSchema(jsonPath);
+    
+                                        JSONArray bqSchemaJsonArray =
+                                            jsonSchema.getJSONArray(BIGQUERY_SCHEMA);
+    
+                                        for (int i = 0; i < bqSchemaJsonArray.length(); i++) {
+                                            JSONObject inputField = bqSchemaJsonArray.getJSONObject(i);
+                                            TableFieldSchema field =
+                                                new TableFieldSchema()
+                                                    .setName(inputField.getString(NAME))
+                                                    .setType(inputField.getString(TYPE));
+                                            if (inputField.has(MODE)) {
+                                                field.setMode(inputField.getString(MODE));
+                                            }
+    
+                                            fields.add(field);
+                                        }
+                                        tableSchema.setFields(fields);
+                                    } catch (Exception e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                    return tableSchema;
+                                }
+                            }))
+                        .withTimePartitioning(
+                            new TimePartitioning().setField("blocktime")
+                                .setType("DAY")
+                                .setExpirationMs(null)
+                        )
+                        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+                        .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+                        .to(options.getBqTxTbl())
+                        .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
+                        .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
+                        .withCustomGcsTempLocation(options.getGcsTempLocation()));
 
         // TODO: error data
         PCollection<String> errJson = allJson.get(JsonData.ERR.ordinal());
@@ -485,6 +633,11 @@ public class BindiegoStreaming {
     /* tag for failure output from the UDF */
     private static final TupleTag<String> STR_FAILURE_OUT = 
         new TupleTag<String>() {};
+
+    private static final String BIGQUERY_SCHEMA = "BigQuery Schema";
+    private static final String NAME = "name";
+    private static final String TYPE = "type";
+    private static final String MODE = "mode";
 
     enum JsonData {
         BLK, // Block json data

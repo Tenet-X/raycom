@@ -142,4 +142,24 @@ public interface BindiegoStreamingOptions
     @Required
     String getTxIdx();
     void setTxIdx(String value);
+
+    @Description("BigQuery Schema - Block")
+    @Required
+    ValueProvider<String> getBqBlk();
+    void setBqBlk(ValueProvider<String> value);
+
+    @Description("BigQuery Schema - Transaction")
+    @Required
+    ValueProvider<String> getBqTx();
+    void setBqTx(ValueProvider<String> value);
+
+    @Description("BigQuery table - Block")
+    @Required
+    ValueProvider<String> getBqBlkTbl();
+    void setBqBlkTbl(ValueProvider<String> value);
+
+    @Description("BigQuery table - Transaction")
+    @Required
+    ValueProvider<String> getBqTxTbl();
+    void setBqTxTbl(ValueProvider<String> value);
 }

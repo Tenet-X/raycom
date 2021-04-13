@@ -14,8 +14,16 @@ esBatchBytes := 10485760
 esNumThread := 2
 blkIdx := polkadata-blk-ingest
 txIdx := polkadata-tx-ingest
+bqblk := gs://polkadot-tw/bqschema/polkadata-blk.json
+bqtx := gs://polkadot-tw/bqschema/polkadata-tx.json
+bqblktbl := local-alignment-284902:polkadot.block
+bqtxtbl := local-alignment-284902:polkadot.transaction
 
-dfup:
+bqschema:
+	@gsutil -m cp schemas/polkadata-blk.json $(bqblk)
+	@gsutil -m cp schemas/polkadata-tx.json $(bqtx)
+
+dfup: bqschema
 	@mvn -Pdataflow-runner compile exec:java \
         -Dexec.mainClass=bindiego.BindiegoStreaming \
         -Dexec.cleanupDaemonThreads=false \
@@ -51,13 +59,17 @@ dfup:
         --esNumThread=$(esNumThread) \
         --blkIdx=$(blkIdx) \
         --txIdx=$(txIdx) \
+        --bqBlk=$(bqblk) \
+        --bqTx=$(bqtx) \
+        --bqBlkTbl=$(bqblktbl) \
+        --bqTxTbl=$(bqtxtbl) \
         --defaultWorkerLogLevel=INFO \
         --jobName=$(job) \
         --update \
         --region=$(region) \
         --workerZone=$(region)-$(workerZone)"
 
-df:
+df: bqschema
 	@mvn -Pdataflow-runner compile exec:java \
         -Dexec.mainClass=bindiego.BindiegoStreaming \
         -Dexec.cleanupDaemonThreads=false \
@@ -104,4 +116,4 @@ cancel:
 drain:
 	@gcloud dataflow jobs drain $(job) --region=$(region)
 
-.PHONY: df dfup cancel drain
+.PHONY: df dfup cancel drain baschema
