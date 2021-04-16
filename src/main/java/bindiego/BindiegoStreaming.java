@@ -91,6 +91,7 @@ import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.coders.Coder.Context;
 import org.apache.avro.Schema;
 import org.apache.avro.file.CodecFactory;
 import org.apache.avro.generic.GenericData;
@@ -305,9 +306,9 @@ public class BindiegoStreaming {
                         ObjectNode jsonRoot = (ObjectNode) json;
                     
                         if (null != json.get("transactionCount")) {
-                            return JsonData.TX.ordinal();
-                        } else {
                             return JsonData.BLK.ordinal();
+                        } else {
+                            return JsonData.TX.ordinal();
                         }
                     } catch (JsonProcessingException ex) {
                         return JsonData.ERR.ordinal();
@@ -351,13 +352,22 @@ public class BindiegoStreaming {
                     @ProcessElement
                     public void processElement(ProcessContext ctx) {
                         String jsonBlk = ctx.element();
-                        
+
                         try {
-                            ctx.output(
-                                TableRowJsonCoder.of().decode(
-                                    new ByteArrayInputStream(jsonBlk.getBytes())
-                                )
+                            ObjectMapper mapper = new ObjectMapper();
+                            JsonNode json = mapper.readTree(jsonBlk);
+                            ObjectNode jsonRoot = (ObjectNode) json;
+                            jsonRoot.remove("@timestamp");
+
+                            TableRow tb = TableRowJsonCoder.of().decode(
+                                new ByteArrayInputStream(
+                                    mapper.writeValueAsString(json)
+                                        .getBytes(StandardCharsets.UTF_8)),
+                                Context.OUTER
                             );
+                            logger.info("Block:" + tb.toPrettyString());
+
+                            ctx.output(tb);
                         } catch (java.io.IOException ex) {
                             logger.error("Failed creating BQ Block TableRow", ex);
                         }
@@ -410,6 +420,8 @@ public class BindiegoStreaming {
                     .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
                     .withWriteDisposition(WriteDisposition.WRITE_APPEND)
                     .to(options.getBqBlkTbl())
+                    .withExtendedErrorInfo()
+                    .withoutValidation()
                     .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
                     .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
                     .withCustomGcsTempLocation(options.getGcsTempLocation()));
@@ -454,11 +466,20 @@ public class BindiegoStreaming {
                             String jsonTx = ctx.element();
     
                             try {
-                                ctx.output(
-                                    TableRowJsonCoder.of().decode(
-                                        new ByteArrayInputStream(jsonTx.getBytes())
-                                    )
+                                ObjectMapper mapper = new ObjectMapper();
+                                JsonNode json = mapper.readTree(jsonTx);
+                                ObjectNode jsonRoot = (ObjectNode) json;
+                                jsonRoot.remove("@timestamp");
+
+                                TableRow tb = TableRowJsonCoder.of().decode(
+                                    new ByteArrayInputStream(
+                                        mapper.writeValueAsString(json)
+                                            .getBytes(StandardCharsets.UTF_8)),
+                                    Context.OUTER
                                 );
+                                logger.info("Transaction:" + tb.toPrettyString());
+
+                                ctx.output(tb);
                             } catch (java.io.IOException ex) {
                                 logger.error("Failed creating BQ Transaction TableRow", ex);
                             }
@@ -511,6 +532,8 @@ public class BindiegoStreaming {
                         .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
                         .withWriteDisposition(WriteDisposition.WRITE_APPEND)
                         .to(options.getBqTxTbl())
+                        .withExtendedErrorInfo()
+                        .withoutValidation()
                         .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
                         .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
                         .withCustomGcsTempLocation(options.getGcsTempLocation()));
