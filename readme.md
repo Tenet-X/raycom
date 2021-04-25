@@ -1,13 +1,14 @@
-## Polkadot Eco Data in Elasticsearch
+## Blockchains Data Platform Distributed Computing Component
 
 [![Build Status](https://jenkins.bindiego.com/buildStatus/icon?job=raycom-gclb-log)](https://jenkins.bindiego.com/job/raycom-gclb-log/)
 
-This is a streaming data processing pipeline written in Apache Beam for Polkadot which could potentially drive Google Dataflow, Flink, Spark Streaming, Storm and various other distributed computing platform without maintaining many code branches.
+This is a streaming data processing pipeline written in Apache Beam for Blockchain which could potentially drive Google Dataflow, Flink, Spark Streaming, Storm and various other distributed computing platform without maintaining many code branches.
 
-This pipeline only used for
+This pipeline currently supports
 
-- Polkadot node system logs
-- Polkadot node business transactional logs
+- Polkadot node logs over GKE
+- Polkadot node chain data (Blocks & Transactions)
+- Ethereum node chain data (Blocks & Transcations)
 
 k8s/GKE system logs and metrics in Elasticsearch please refer to [Cloudy Moma](https://github.com/cloudymoma)
 
