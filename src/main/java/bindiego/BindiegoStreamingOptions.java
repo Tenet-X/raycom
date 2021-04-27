@@ -133,33 +133,73 @@ public interface BindiegoStreamingOptions
     ValueProvider<String> getPolkadatasub();
     void setPolkadatasub(ValueProvider<String> value);
 
-    @Description("Elasticsearch index used for blocks data")
+    @Description("Elasticsearch index used for polkadot blocks data")
     @Required
     String getBlkIdx();
     void setBlkIdx(String value);
 
-    @Description("Elasticsearch index used for transactions data")
+    @Description("Elasticsearch index used for polkadot transactions data")
     @Required
     String getTxIdx();
     void setTxIdx(String value);
 
-    @Description("BigQuery Schema - Block")
+    @Description("BigQuery Schema - polkadot Block")
     @Required
     ValueProvider<String> getBqBlk();
     void setBqBlk(ValueProvider<String> value);
 
-    @Description("BigQuery Schema - Transaction")
+    @Description("BigQuery Schema - polkadot Transaction")
     @Required
     ValueProvider<String> getBqTx();
     void setBqTx(ValueProvider<String> value);
 
-    @Description("BigQuery table - Block")
+    @Description("BigQuery table - polkadot Block")
     @Required
     ValueProvider<String> getBqBlkTbl();
     void setBqBlkTbl(ValueProvider<String> value);
 
-    @Description("BigQuery table - Transaction")
+    @Description("BigQuery table - polkadot Transaction")
     @Required
     ValueProvider<String> getBqTxTbl();
     void setBqTxTbl(ValueProvider<String> value);
+
+    @Description("Ethereum blocks data subcription of pubsub")
+    @Required
+    ValueProvider<String> getEthdataBlkSub();
+    void setEthdataBlkSub(ValueProvider<String> value);
+
+    @Description("Ethereum transactions data subcription of pubsub")
+    @Required
+    ValueProvider<String> getEthdataTxSub();
+    void setEthdataTxSub(ValueProvider<String> value);
+
+    @Description("Elasticsearch index used for ethereum blocks data")
+    @Required
+    String getEthBlkIdx();
+    void setEthBlkIdx(String value);
+
+    @Description("Elasticsearch index used for ethereum transactions data")
+    @Required
+    String getEthTxIdx();
+    void setEthTxIdx(String value);
+
+    @Description("BigQuery Schema - ethereum Block")
+    @Required
+    ValueProvider<String> getEthBqBlk();
+    void setEthBqBlk(ValueProvider<String> value);
+
+    @Description("BigQuery Schema - ethereum Transaction")
+    @Required
+    ValueProvider<String> getEthBqTx();
+    void setEthBqTx(ValueProvider<String> value);
+
+    @Description("BigQuery table - ethereum Block")
+    @Required
+    ValueProvider<String> getEthBqBlkTbl();
+    void setEthBqBlkTbl(ValueProvider<String> value);
+
+    @Description("BigQuery table - ethereum Transaction")
+    @Required
+    ValueProvider<String> getEthBqTxTbl();
+    void setEthBqTxTbl(ValueProvider<String> value);
 }

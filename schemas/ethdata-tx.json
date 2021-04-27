@@ -1,0 +1,92 @@
+{ "BigQuery Schema": [
+  {
+    "mode": "REQUIRED",
+    "name": "block_timestamp",
+    "type": "TIMESTAMP"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "block_hash",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "block_number",
+    "type": "INT64"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "from_address",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "gas",
+    "type": "INT64"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "hash",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "gas_price",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "input",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "nonce",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "receipt_cumulative_gas_used",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "receipt_gas_used",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "receipt_root",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "receipt_contract_address",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "receipt_status",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "to_address",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "transaction_index",
+    "type": "INT64"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "value",
+    "type": "INT64"
+  }
+]}

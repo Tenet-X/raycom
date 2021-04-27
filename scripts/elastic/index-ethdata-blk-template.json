@@ -1,0 +1,102 @@
+{
+    "index_patterns": [
+        "ethdata-blk*"
+    ],
+    "order": 999,
+    "settings": {
+      "number_of_shards": 4,
+      "number_of_replicas": 1,
+      "index.lifecycle.name": "ethereum-policy",
+      "index.lifecycle.rollover_alias": "ethdata-blk-ingest",
+      "codec": "best_compression"
+    },
+    "mappings" : {
+      "dynamic": true,
+      "properties" : {
+        "@timestamp": {
+          "type" : "date",
+          "format": "epoch_second"
+        },
+        "difficulty" : {
+          "type" : "unsigned_long"
+        },
+        "extra_data" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "gas_limit" : {
+          "type" : "unsigned_long"
+        },
+        "gas_used" : {
+          "type" : "unsigned_long"
+        },
+        "hash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "miner" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "nonce" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "number" : {
+          "type" : "unsigned_long"
+        },
+        "parent_hash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "receipts_root" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "sha3_uncles" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "size" : {
+          "type" : "unsigned_long"
+        },
+        "state_root" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "total_difficulty" : {
+          "type" : "unsigned_long"
+        },
+        "transaction_count" : {
+          "type" : "unsigned_long"
+        },
+        "transactions_root" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "type" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "logs_bloom" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 512
+            }
+          }
+        }
+      }
+    }
+}

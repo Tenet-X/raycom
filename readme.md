@@ -94,15 +94,3 @@ First thing first, all latency values, such as `httpRequest.backendLatency` and 
 #### Dashboards in Kibana
 
 Import from [this](https://github.com/cloudymoma/raycom/blob/gcp-lb-log/scripts/elastic/gclb_dashboard.ndjson) example
-
-You could have much more beyond the below examples in Kibana
-
-![](https://raw.githubusercontent.com/cloudymoma/raycom/gcp-lb-log/miscs/gclb-dash1.png)
-
-![](https://raw.githubusercontent.com/cloudymoma/raycom/gcp-lb-log/miscs/gclb-dash2.png)
-
-![](https://raw.githubusercontent.com/cloudymoma/raycom/gcp-lb-log/miscs/gclb-dash3.png)
-
-![](https://raw.githubusercontent.com/cloudymoma/raycom/gcp-lb-log/miscs/gclb-dash4.png)
-
-![](https://raw.githubusercontent.com/cloudymoma/raycom/gcp-lb-log/miscs/gclb-dash5.png)

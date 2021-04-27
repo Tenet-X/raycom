@@ -1,6 +1,8 @@
 package bindiego;
 
-import  bindiego.BindiegoStreamingOptions;
+import bindiego.BindiegoStreamingOptions;
+import bindiego.ethereum.TrimRawBlockData;
+import bindiego.ethereum.TrimRawTransactionData;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -287,6 +289,248 @@ public class BindiegoStreaming {
 
         Pipeline p = Pipeline.create(options);
 
+        /* Ethereum data */
+
+        // Etherum Blocks
+        PCollection<PubsubMessage> ethBlkRaw = p.apply("Read Pubsub - Ethereum Blocks data", 
+            PubsubIO.readMessages()
+                .fromSubscription(options.getEthdataBlkSub()));
+        PCollection<String> ethBlkJson = ethBlkRaw.apply("Extract Blocks Data",
+            ParDo.of(new TrimRawBlockData()));
+
+        // Blocks to Elasticsearch
+        ethBlkJson.apply(options.getWindowSize() + " window for block data",
+            Window.<String>into(FixedWindows.of(DurationUtils.parseDuration(options.getWindowSize())))
+                .triggering(
+                    AfterWatermark.pastEndOfWindow()
+                        .withEarlyFirings(
+                            AfterProcessingTime
+                                .pastFirstElementInPane() 
+                                .plusDelayOf(DurationUtils.parseDuration(options.getEarlyFiringPeriod())))
+                        .withLateFirings(
+                            AfterPane.elementCountAtLeast(
+                                options.getLateFiringCount().intValue()))
+                )
+                .discardingFiredPanes() // e.g. .accumulatingFiredPanes() etc.
+                .withAllowedLateness(DurationUtils.parseDuration(options.getAllowedLateness()),
+                    ClosingBehavior.FIRE_IF_NON_EMPTY))
+            .apply("Append block data to Elasticsearch",
+                ElasticsearchIO.append()
+                    .withMaxBatchSize(options.getEsMaxBatchSize())
+                    .withMaxBatchSizeBytes(options.getEsMaxBatchBytes())
+                    .withConnectionConf(
+                        ElasticsearchIO.ConnectionConf.create(
+                            options.getEsHost(),
+                            options.getEthBlkIdx())
+                                .withUsername(options.getEsUser())
+                                .withPassword(options.getEsPass())
+                                .withNumThread(options.getEsNumThread()))
+                                //.withTrustSelfSignedCerts(true)) // false by default
+                    .withRetryConf(
+                        ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
+
+        // Blocks to BigQuery
+        ethBlkJson.apply("Prepare Block BQ TableRow",
+            ParDo.of(
+                new DoFn<String, TableRow>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext ctx) {
+                        String jsonBlk = ctx.element();
+
+                        try {
+                            ObjectMapper mapper = new ObjectMapper();
+                            JsonNode json = mapper.readTree(jsonBlk);
+                            ObjectNode jsonRoot = (ObjectNode) json;
+                            jsonRoot.remove("@timestamp");
+
+                            TableRow tb = TableRowJsonCoder.of().decode(
+                                new ByteArrayInputStream(
+                                    mapper.writeValueAsString(json)
+                                        .getBytes(StandardCharsets.UTF_8)),
+                                Context.OUTER
+                            );
+                            logger.info("Block:" + tb.toPrettyString());
+
+                            ctx.output(tb);
+                        } catch (java.io.IOException ex) {
+                            logger.error("Failed creating BQ Block TableRow", ex);
+                        }
+                    } // End processElement
+                } // End DoFn
+            ) // End ParDo
+        ).apply("Insert BigQuery - Block",
+            BigQueryIO.writeTableRows()
+                .withSchema(
+                    NestedValueProvider.of(
+                        options.getEthBqBlk(),
+                        new SerializableFunction<String, TableSchema>() {
+                            @Override
+                            public TableSchema apply(String jsonPath) {
+                                TableSchema tableSchema = new TableSchema();
+                                List<TableFieldSchema> fields = new ArrayList<>();
+                                SchemaParser schemaParser = new SchemaParser();
+                                JSONObject jsonSchema;
+
+                                try {
+                                    jsonSchema = schemaParser.parseSchema(jsonPath);
+
+                                    JSONArray bqSchemaJsonArray =
+                                        jsonSchema.getJSONArray(BIGQUERY_SCHEMA);
+
+                                    for (int i = 0; i < bqSchemaJsonArray.length(); i++) {
+                                        JSONObject inputField = bqSchemaJsonArray.getJSONObject(i);
+                                        TableFieldSchema field =
+                                            new TableFieldSchema()
+                                                .setName(inputField.getString(NAME))
+                                                .setType(inputField.getString(TYPE));
+                                        if (inputField.has(MODE)) {
+                                            field.setMode(inputField.getString(MODE));
+                                        }
+
+                                        fields.add(field);
+                                    }
+                                    tableSchema.setFields(fields);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                                return tableSchema;
+                            }
+                        }))
+                    .withTimePartitioning(
+                        new TimePartitioning().setField("timestamp")
+                            .setType("DAY")
+                            .setExpirationMs(null)
+                    )
+                    .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+                    .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+                    .to(options.getEthBqBlkTbl())
+                    .withExtendedErrorInfo()
+                    .withoutValidation()
+                    .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
+                    .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
+                    .withCustomGcsTempLocation(options.getGcsTempLocation()));
+
+        // Etherum Transactions
+        PCollection<PubsubMessage> ethTxRaw = p.apply("Read Pubsub - Ethereum Transactions data", 
+            PubsubIO.readMessages()
+                .fromSubscription(options.getEthdataTxSub()));
+        PCollection<String> ethTxJson = ethTxRaw.apply("Extract Transactions Data",
+            ParDo.of(new TrimRawTransactionData()));
+
+        // Transactions to Elasticsearch
+        ethTxJson.apply(options.getWindowSize() + " window for transaction data",
+            Window.<String>into(FixedWindows.of(DurationUtils.parseDuration(options.getWindowSize())))
+                .triggering(
+                    AfterWatermark.pastEndOfWindow()
+                        .withEarlyFirings(
+                            AfterProcessingTime
+                                .pastFirstElementInPane() 
+                                .plusDelayOf(DurationUtils.parseDuration(options.getEarlyFiringPeriod())))
+                        .withLateFirings(
+                            AfterPane.elementCountAtLeast(
+                                options.getLateFiringCount().intValue()))
+                )
+                .discardingFiredPanes() // e.g. .accumulatingFiredPanes() etc.
+                .withAllowedLateness(DurationUtils.parseDuration(options.getAllowedLateness()),
+                    ClosingBehavior.FIRE_IF_NON_EMPTY))
+            .apply("Append transaction data to Elasticsearch",
+                ElasticsearchIO.append()
+                    .withMaxBatchSize(options.getEsMaxBatchSize())
+                    .withMaxBatchSizeBytes(options.getEsMaxBatchBytes())
+                    .withConnectionConf(
+                        ElasticsearchIO.ConnectionConf.create(
+                            options.getEsHost(),
+                            options.getEthTxIdx())
+                                .withUsername(options.getEsUser())
+                                .withPassword(options.getEsPass())
+                                .withNumThread(options.getEsNumThread()))
+                                //.withTrustSelfSignedCerts(true)) // false by default
+                    .withRetryConf(
+                        ElasticsearchIO.RetryConf.create(6, Duration.standardSeconds(60))));
+
+        // Transactions to BigQuery
+        ethTxJson.apply("Prepare Transaction BQ TableRow",
+            ParDo.of(
+                new DoFn<String, TableRow>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext ctx) {
+                        String jsonTx = ctx.element();
+
+                        try {
+                            ObjectMapper mapper = new ObjectMapper();
+                            JsonNode json = mapper.readTree(jsonTx);
+                            //ObjectNode jsonRoot = (ObjectNode) json;
+                            //sonRoot.remove("@timestamp");
+
+                            TableRow tb = TableRowJsonCoder.of().decode(
+                                new ByteArrayInputStream(
+                                    mapper.writeValueAsString(json)
+                                        .getBytes(StandardCharsets.UTF_8)),
+                                Context.OUTER
+                            );
+                            logger.info("Transaction:" + tb.toPrettyString());
+
+                            ctx.output(tb);
+                        } catch (java.io.IOException ex) {
+                            logger.error("Failed creating BQ Transaction TableRow", ex);
+                        }
+                    } // End processElement
+                } // End DoFn
+            ) // End ParDo
+        ).apply("Insert BigQuery - Transaction",
+            BigQueryIO.writeTableRows()
+                .withSchema(
+                    NestedValueProvider.of(
+                        options.getEthBqTx(),
+                        new SerializableFunction<String, TableSchema>() {
+                            @Override
+                            public TableSchema apply(String jsonPath) {
+                                TableSchema tableSchema = new TableSchema();
+                                List<TableFieldSchema> fields = new ArrayList<>();
+                                SchemaParser schemaParser = new SchemaParser();
+                                JSONObject jsonSchema;
+
+                                try {
+                                    jsonSchema = schemaParser.parseSchema(jsonPath);
+
+                                    JSONArray bqSchemaJsonArray =
+                                        jsonSchema.getJSONArray(BIGQUERY_SCHEMA);
+
+                                    for (int i = 0; i < bqSchemaJsonArray.length(); i++) {
+                                        JSONObject inputField = bqSchemaJsonArray.getJSONObject(i);
+                                        TableFieldSchema field =
+                                            new TableFieldSchema()
+                                                .setName(inputField.getString(NAME))
+                                                .setType(inputField.getString(TYPE));
+                                        if (inputField.has(MODE)) {
+                                            field.setMode(inputField.getString(MODE));
+                                        }
+
+                                        fields.add(field);
+                                    }
+                                    tableSchema.setFields(fields);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                                return tableSchema;
+                            }
+                        }))
+                    .withTimePartitioning(
+                        new TimePartitioning().setField("block_timestamp")
+                            .setType("DAY")
+                            .setExpirationMs(null)
+                    )
+                    .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+                    .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+                    .to(options.getEthBqTxTbl())
+                    .withExtendedErrorInfo()
+                    .withoutValidation()
+                    .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
+                    .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
+                    .withCustomGcsTempLocation(options.getGcsTempLocation()));
+
+        /* End Ethereum data */
+
         /* Polkadot data */
         PCollection<PubsubMessage> polkadataMsg = p.apply("Read Pubsub - Polkadot data", 
             PubsubIO.readMessages()
@@ -365,7 +609,7 @@ public class BindiegoStreaming {
                                         .getBytes(StandardCharsets.UTF_8)),
                                 Context.OUTER
                             );
-                            logger.info("Block:" + tb.toPrettyString());
+                            logger.debug("Block:" + tb.toPrettyString());
 
                             ctx.output(tb);
                         } catch (java.io.IOException ex) {
@@ -477,7 +721,7 @@ public class BindiegoStreaming {
                                             .getBytes(StandardCharsets.UTF_8)),
                                     Context.OUTER
                                 );
-                                logger.info("Transaction:" + tb.toPrettyString());
+                                logger.debug("Transaction:" + tb.toPrettyString());
 
                                 ctx.output(tb);
                             } catch (java.io.IOException ex) {

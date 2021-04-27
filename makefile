@@ -4,12 +4,12 @@ region := asia-east1
 workerType := e2-standard-2
 workerZone := b
 project := g-hash-community
-job := polkadot-data-dev
+job := chain-data-dev
 numWorkers := 2
 maxWorkers := 20
 eshost := https://k8es.ingest.bindiego.com
 esuser := polkadot-data-ingest
-espass := changeme
+espass=`cat espass`
 esindex := polkadot-ingest
 esBatchSize := 2000
 esBatchBytes := 10485760
@@ -22,12 +22,25 @@ bqblktbl := g-hash-community:polkadot.block
 bqtxtbl := g-hash-community:polkadot.transaction
 logssub := polkadot-logs-sub
 datasub := polkadot-data-sub
+ethblkIdx := ethdata-blk-ingest
+ethtxIdx := ethdata-tx-ingest
+ethbqblk := gs://polkadot-tw-oss/bqschema/ethdata-blk.json
+ethbqtx := gs://polkadot-tw-oss/bqschema/ethdata-tx.json
+ethbqblktbl := g-hash-community:eth.block
+ethbqtxtbl := g-hash-community:eth.transaction
+ethBlkSub := ethbeat.blocks-sub
+ethTxSub := ethbeat.transactions-sub
+
+init:
+	@[ -f espass ] || touch espass
 
 bqschema:
 	@gsutil -m cp schemas/polkadata-blk.json $(bqblk)
 	@gsutil -m cp schemas/polkadata-tx.json $(bqtx)
+	@gsutil -m cp schemas/ethdata-blk.json $(ethbqblk)
+	@gsutil -m cp schemas/ethdata-tx.json $(ethbqtx)
 
-dfup: bqschema
+dfup: init bqschema
 	@mvn -Pdataflow-runner compile exec:java \
         -Dexec.mainClass=bindiego.BindiegoStreaming \
         -Dexec.cleanupDaemonThreads=false \
@@ -46,6 +59,8 @@ dfup: bqschema
         --topic=projects/$(project)/topics/polkadot-eco-logs \
         --subscription=projects/$(project)/subscriptions/$(logssub) \
         --polkadatasub=projects/$(project)/subscriptions/$(datasub) \
+        --ethdataBlkSub=projects/$(project)/subscriptions/$(ethBlkSub) \
+        --ethdataTxSub=projects/$(project)/subscriptions/$(ethTxSub) \
         --numShards=1 \
         --windowSize=6s \
         --allowedLateness=8s \
@@ -67,13 +82,19 @@ dfup: bqschema
         --bqTx=$(bqtx) \
         --bqBlkTbl=$(bqblktbl) \
         --bqTxTbl=$(bqtxtbl) \
+        --ethBlkIdx=$(ethblkIdx) \
+        --ethTxIdx=$(ethtxIdx) \
+        --ethBqBlk=$(ethbqblk) \
+        --ethBqTx=$(ethbqtx) \
+        --ethBqBlkTbl=$(ethbqblktbl) \
+        --ethBqTxTbl=$(ethbqtxtbl) \
         --defaultWorkerLogLevel=INFO \
         --jobName=$(job) \
         --update \
         --region=$(region) \
         --workerZone=$(region)-$(workerZone)"
 
-df: bqschema
+df: init bqschema
 	@mvn -Pdataflow-runner compile exec:java \
         -Dexec.mainClass=bindiego.BindiegoStreaming \
         -Dexec.cleanupDaemonThreads=false \
@@ -92,6 +113,8 @@ df: bqschema
         --topic=projects/$(project)/topics/polkadot-eco-logs \
         --subscription=projects/$(project)/subscriptions/$(logssub) \
         --polkadatasub=projects/$(project)/subscriptions/$(datasub) \
+        --ethdataBlkSub=projects/$(project)/subscriptions/$(ethBlkSub) \
+        --ethdataTxSub=projects/$(project)/subscriptions/$(ethTxSub) \
         --numShards=1 \
         --windowSize=6s \
         --allowedLateness=8s \
@@ -113,6 +136,12 @@ df: bqschema
         --bqTx=$(bqtx) \
         --bqBlkTbl=$(bqblktbl) \
         --bqTxTbl=$(bqtxtbl) \
+         --ethBlkIdx=$(ethblkIdx) \
+        --ethTxIdx=$(ethtxIdx) \
+        --ethBqBlk=$(ethbqblk) \
+        --ethBqTx=$(ethbqtx) \
+        --ethBqBlkTbl=$(ethbqblktbl) \
+        --ethBqTxTbl=$(ethbqtxtbl) \
         --defaultWorkerLogLevel=INFO \
         --jobName=$(job) \
         --region=$(region) \
@@ -124,4 +153,4 @@ cancel:
 drain:
 	@gcloud dataflow jobs drain $(job) --region=$(region)
 
-.PHONY: df dfup cancel drain baschema
+.PHONY: init df dfup cancel drain baschema

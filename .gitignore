@@ -1,6 +1,8 @@
 # Project specific
 output-*
 debug
+espass
+scripts/elastic/espass
 
 ##########################
 ## Java

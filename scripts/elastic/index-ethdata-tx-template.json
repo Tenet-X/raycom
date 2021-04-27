@@ -1,0 +1,91 @@
+{
+    "index_patterns": [
+        "ethdata-tx*"
+    ],
+    "order": 999,
+    "settings": {
+      "number_of_shards": 4,
+      "number_of_replicas": 1,
+      "index.lifecycle.name": "ethereum-policy",
+      "index.lifecycle.rollover_alias": "ethdata-tx-ingest",
+      "codec": "best_compression"
+    },
+    "mappings" : {
+      "dynamic": true,
+      "properties" : {
+        "block_hash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "block_number" : {
+          "type" : "unsigned_long"
+        },
+        "block_timestamp" : {
+          "type" : "date",
+          "format": "epoch_second"
+        },
+        "from_address" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "gas" : {
+          "type" : "unsigned_long"
+        },
+        "gas_price" : {
+          "type" : "unsigned_long"
+        },
+        "hash" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "input" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "nonce" : {
+          "type" : "unsigned_long"
+        },
+        "receipt_cumulative_gas_used" : {
+          "type" : "unsigned_long"
+        },
+        "receipt_gas_used" : {
+          "type" : "unsigned_long"
+        },
+        "receipt_root" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "receipt_contract_address" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "receipt_status" : {
+          "type" : "integer"
+        },
+        "to_address" : {
+          "type" : "keyword",
+          "ignore_above" : 256
+        },
+        "transaction_index" : {
+          "type" : "unsigned_long"
+        },
+        "type" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "value" : {
+          "type" : "unsigned_long"
+        }
+      }
+    }
+}

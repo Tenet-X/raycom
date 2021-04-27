@@ -5,7 +5,15 @@ pwd=`pwd`
 es_client=https://k8es.client.bindiego.com
 kbn_host=https://k8na.bindiego.com
 es_user=elastic
-es_pass=changeme
+es_pass=$(<espass)
+
+[ -f $pwd/espass ] || touch espass
+
+if [ ! -s $pwd/espass ]
+then
+    echo "espass file is empty, please set the Elasticsearch password there"
+    exit 1
+fi
 
 # Create an ES pipeline for GCLB logs
 __create_index_pipeline() {
