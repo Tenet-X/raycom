@@ -1,4 +1,4 @@
-## Blockchains Data Platform Distributed Computing Component
+## Beam sample code
 
 [![Build Status](https://jenkins.bindiego.com/buildStatus/icon?job=raycom-gclb-log)](https://jenkins.bindiego.com/job/raycom-gclb-log/)
 
