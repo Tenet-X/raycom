@@ -44,7 +44,7 @@ bqschema: gsc
 gcs:
         @-gsutil mb -p $(project) \
                 -c STANDARD \
-                -l $(region)
+                -l $(region) \
                 -b on \
                 gs://$(gcsRoot)
 
