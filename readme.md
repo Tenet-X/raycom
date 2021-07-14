@@ -1,8 +1,8 @@
-## Blockchains Data Platform Distributed Computing Component
+## Beam sample code
 
 [![Build Status](https://jenkins.bindiego.com/buildStatus/icon?job=raycom-gclb-log)](https://jenkins.bindiego.com/job/raycom-gclb-log/)
 
-This is a streaming data processing pipeline written in Apache Beam for Blockchain which could potentially drive Google Dataflow, Flink, Spark Streaming, Storm and various other distributed computing platform without maintaining many code branches.
+This is a streaming data processing pipeline written in Apache Beam for BC which could potentially drive Google Dataflow, Flink, Spark Streaming, Storm and various other distributed computing platform without maintaining many code branches.
 
 This pipeline currently supports
 
