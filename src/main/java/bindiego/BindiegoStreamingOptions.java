@@ -130,6 +130,7 @@ public interface BindiegoStreamingOptions
 
     @Description("Polkadot data (from agent RPC query) subcription of pubsub")
     @Required
+    @Default.String("polkadot-data-sub")
     ValueProvider<String> getPolkadatasub();
     void setPolkadatasub(ValueProvider<String> value);
 
