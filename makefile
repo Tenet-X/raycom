@@ -35,11 +35,18 @@ ethTxSub := ethbeat.transactions-sub
 init:
 	@[ -f espass ] || touch espass
 
-bqschema:
+bqschema: gsc
 	@gsutil -m cp schemas/polkadata-blk.json $(bqblk)
 	@gsutil -m cp schemas/polkadata-tx.json $(bqtx)
 	@gsutil -m cp schemas/ethdata-blk.json $(ethbqblk)
 	@gsutil -m cp schemas/ethdata-tx.json $(ethbqtx)
+
+gcs:
+        @-gsutil mb -p $(project) \
+                -c STANDARD \
+                -l $(region)
+                -b on \
+                gs://$(gcsRoot)
 
 dfup: init bqschema
 	@mvn -Pdataflow-runner compile exec:java \
